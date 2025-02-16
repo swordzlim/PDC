@@ -653,6 +653,56 @@ void Graph::AC(){
 
 }
 
+void Graph::ACP(){
+    //initialize iHindex, iH[v] = din[v], oH[v] = dout[v]
+    omp_set_num_threads(num_of_thread);
+    iH.resize(n,0);
+    oH.resize(n,0);
+#pragma omp parallel for schedule(static)
+    for(int i=0;i<n;i++){
+        oH[i] = deg[0][i];
+        iH[i] = deg[1][i];
+    }
+
+    //compute kmax, lmax
+    bool flag = true;
+    while(flag){
+        flag = false;
+#pragma omp parallel for schedule(static)
+        for(int i=0;i<n;i++){
+            if(HIndex(i))
+                flag = true;
+            if(outHIndex(i))
+                flag = true;
+        }
+    }
+
+    //initialize iHk
+#pragma omp parallel for schedule(static)
+    for(int i=0;i<n;i++){
+        int dout = oH[i];
+        int kv = iH[i];
+        for(int k=0;k<=kv;k++)
+            iHk[i].push_back(dout);
+    }
+
+    // /////////////////phase 3: refine lupp
+    flag = true;
+
+    while(flag){
+        flag = false;
+#pragma omp parallel for schedule(static)
+        for(int i=0;i<n;i++)
+            if(Refine(i))
+                flag = true;
+    }
+
+    printf("anchored coreness plus done.\n");
+
+
+
+}
+
 //parallel compute (k, 0)-core, dout = deg[0] = 0
 void Graph::pkc(){
     //获取线程数
@@ -802,7 +852,7 @@ void Graph::plc(){
 }
 
 
-void Graph::Shell_PDC(){
+void Graph::ACP_plus(){
     inCdeg = (int *)malloc(n * sizeof(int));
     outTdeg = (int *)malloc(n * sizeof(int));
     inTdeg = (int *)malloc(n * sizeof(int));
@@ -2055,4 +2105,3 @@ std::vector<int> Graph::Parpeel(int k, std::vector<int> upper){
 
     return Dout;  
 }
-
